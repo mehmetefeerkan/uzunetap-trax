@@ -1,1287 +1,1427 @@
+function httpGet(theUrl)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+    xmlHttp.send( null );
+    return JSON.parse(xmlHttp.responseText);
+}
+
+let socket = new WebSocket("ws://127.0.0.1:8080");
+socket.onopen = function(e) {
+  console.log("[open] Connection established");
+  console.log("Sending to server");
+  socket.send("initial_data");
+};
+socket.onmessage = function(event) {
+  //console.log(JSON.parse(event.data))
+};
+socket.onmessage = function(message) {
+  console.log(message.data);
+  let md = message.data
+  if (md === "heartbeat"){
+
+  }
+  else if (md === "data_changed"){
+    runnerData_ = httpGet("http://127.0.0.1:3000/runners")
+    runnerData = runnerData_
+
+    $("#ttas_runner1").html(topThreeAvgSpeeds.runner1.name)
+    $("#ttas_runner2").html(topThreeAvgSpeeds.runner2.name)
+    $("#ttas_runner3").html(topThreeAvgSpeeds.runner3.name)
+  }
+  //console.log(JSON.parse(event.data))
+};
+socket.onclose = function(event) {
+  if (event.wasClean) {
+    console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+  } else {
+    // e.g. server process killed or network down
+    // event.code is usually 1006 in this case
+    console.log('[close] Connection died');
+    location.reload()
+  }
+};
+socket.onerror = function(error) {
+  console.log(`[error] ${error.message}`);
+};
+
+let runnerData_ = httpGet("http://127.0.0.1:3000/runners")
+let raceData_ = httpGet("http://127.0.0.1:3000/race")
+let runnerData = runnerData_
+let raceData = raceData_
+
+function dynamicSort(property) {
+  var sortOrder = 1;
+  if(property[0] === "-") {
+      sortOrder = -1;
+      property = property.substr(1);
+  }
+  return function (a,b) {
+      /* next line works with strings and numbers, 
+       * and you may want to customize it to your needs
+       */
+      var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+      return result * sortOrder;
+  }
+}
+
+timeout()
+mainChartHandling()
+function timeout() {
+  setTimeout(function () {
+    mainChartHandling()
+      timeout();
+  }, 60000);
+}
+
+var top3speedchart = null
+var distancecomparisonchart = null
+
+function refreshChartHandling(){
+  runnerData_ = httpGet("http://127.0.0.1:3000/runners")
+  runnerData = runnerData_
+  let runnerDataDistanceSorted = runnerData.sort(dynamicSort("distanceTraveled"))
+  let runnerDataOHSpeedSorted = runnerData.sort(dynamicSort("averageOHSpeed"))
+
+  $("#ttas_runner1").html(`${runnerDataOHSpeedSorted[0].plate} | ${runnerDataOHSpeedSorted[0].name}`)
+  $("#ttas_runner2").html(`${runnerDataOHSpeedSorted[1].plate} | ${runnerDataOHSpeedSorted[1].name}`)
+  $("#ttas_runner3").html(`${runnerDataOHSpeedSorted[2].plate} | ${runnerDataOHSpeedSorted[2].name}`)
+}
+
+
+function mainChartHandling(){
+  // USE STRICT
+  "use strict";
+  
+  try {
+    runnerData_ = httpGet("http://127.0.0.1:3000/runners")
+    runnerData = runnerData_
+    let saf = ((((Date.now() - raceData.started) / 1000) / 60 / 60))
+    console.log()
+    let safsaat = `${parseInt(saf.toString().split(".")[0])} S`
+    let safdakika = ` ${Math.floor((parseFloat("0." + saf.toString().split(".")[1])) * 60)} D `
+    let safdakika_ = Math.floor((parseFloat("0." + saf.toString().split(".")[1])) * 60)
+    if (safdakika_ === 0){
+      safdakika = ""
+    }
+    $("#raceName").html(raceData.name)
+    $("#runnerCount").html(runnerData.length)
+    $("#timeElapsed").html(`${safsaat}${safdakika}Önce`)
+
+
+
+
+    let runnerDataDistanceSorted = runnerData.sort(dynamicSort("distanceTraveled"))
+      //WidgetChart 1
+      var ctx = document.getElementById("widgetChart1");
+      if (ctx) {
+        ctx.height = 130;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+            type: 'line',
+            datasets: [{
+              data: [78, 81, 80, 45, 34, 12, 40],
+              label: 'Dataset',
+              backgroundColor: 'rgba(255,255,255,.1)',
+              borderColor: 'rgba(255,255,255,.55)',
+            },]
+          },
+          options: {
+            maintainAspectRatio: true,
+            legend: {
+              display: false
+            },
+            layout: {
+              padding: {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0
+              }
+            },
+            responsive: true,
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  color: 'transparent',
+                  zeroLineColor: 'transparent'
+                },
+                ticks: {
+                  fontSize: 2,
+                  fontColor: 'transparent'
+                }
+              }],
+              yAxes: [{
+                display: false,
+                ticks: {
+                  display: false,
+                }
+              }]
+            },
+            title: {
+              display: false,
+            },
+            elements: {
+              line: {
+                borderWidth: 0
+              },
+              point: {
+                radius: 0,
+                hitRadius: 10,
+                hoverRadius: 4
+              }
+            }
+          }
+        });
+      }
+  
+  
+      //WidgetChart 2
+      var ctx = document.getElementById("widgetChart2");
+      if (ctx) {
+        ctx.height = 130;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+            type: 'line',
+            datasets: [{
+              data: [1, 18, 9, 17, 34, 22],
+              label: 'Dataset',
+              backgroundColor: 'transparent',
+              borderColor: 'rgba(255,255,255,.55)',
+            },]
+          },
+          options: {
+  
+            maintainAspectRatio: false,
+            legend: {
+              display: false
+            },
+            responsive: true,
+            tooltips: {
+              mode: 'index',
+              titleFontSize: 12,
+              titleFontColor: '#000',
+              bodyFontColor: '#000',
+              backgroundColor: '#fff',
+              titleFontFamily: 'Montserrat',
+              bodyFontFamily: 'Montserrat',
+              cornerRadius: 3,
+              intersect: false,
+            },
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  color: 'transparent',
+                  zeroLineColor: 'transparent'
+                },
+                ticks: {
+                  fontSize: 2,
+                  fontColor: 'transparent'
+                }
+              }],
+              yAxes: [{
+                display: false,
+                ticks: {
+                  display: false,
+                }
+              }]
+            },
+            title: {
+              display: false,
+            },
+            elements: {
+              line: {
+                tension: 0.00001,
+                borderWidth: 1
+              },
+              point: {
+                radius: 4,
+                hitRadius: 10,
+                hoverRadius: 4
+              }
+            }
+          }
+        });
+      }
+  
+  
+      //WidgetChart 3
+      var ctx = document.getElementById("widgetChart3");
+      if (ctx) {
+        ctx.height = 130;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June'],
+            type: 'line',
+            datasets: [{
+              data: [65, 59, 84, 84, 51, 55],
+              label: 'Dataset',
+              backgroundColor: 'transparent',
+              borderColor: 'rgba(255,255,255,.55)',
+            },]
+          },
+          options: {
+  
+            maintainAspectRatio: false,
+            legend: {
+              display: false
+            },
+            responsive: true,
+            tooltips: {
+              mode: 'index',
+              titleFontSize: 12,
+              titleFontColor: '#000',
+              bodyFontColor: '#000',
+              backgroundColor: '#fff',
+              titleFontFamily: 'Montserrat',
+              bodyFontFamily: 'Montserrat',
+              cornerRadius: 3,
+              intersect: false,
+            },
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  color: 'transparent',
+                  zeroLineColor: 'transparent'
+                },
+                ticks: {
+                  fontSize: 2,
+                  fontColor: 'transparent'
+                }
+              }],
+              yAxes: [{
+                display: false,
+                ticks: {
+                  display: false,
+                }
+              }]
+            },
+            title: {
+              display: false,
+            },
+            elements: {
+              line: {
+                borderWidth: 1
+              },
+              point: {
+                radius: 4,
+                hitRadius: 10,
+                hoverRadius: 4
+              }
+            }
+          }
+        });
+      }
+  
+  
+      //WidgetChart 4
+      var ctx = document.getElementById("widgetChart4");
+      if (ctx) {
+        ctx.height = 115;
+        var myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [78, 81, 80, 65, 58, 75, 60, 75, 65, 60, 60, 75],
+                borderColor: "transparent",
+                borderWidth: "0",
+                backgroundColor: "rgba(255,255,255,.3)"
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: true,
+            legend: {
+              display: false
+            },
+            scales: {
+              xAxes: [{
+                display: false,
+                categoryPercentage: 1,
+                barPercentage: 0.65
+              }],
+              yAxes: [{
+                display: false
+              }]
+            }
+          }
+        });
+      }
+      function randomHSL(){
+        return "hsla(" + ~~(360 * Math.random()) + "," +
+                        "70%,"+
+                        "80%,1)"
+      }
+  
+      function getRandColor(brightness) {
+  
+        // Six levels of brightness from 0 to 5, 0 being the darkest
+        var rgb = [Math.random() * 256, Math.random() * 256, Math.random() * 256];
+        var mix = [brightness * 51, brightness * 51, brightness * 51]; //51 => 255/5
+        var mixedrgb = [rgb[0] + mix[0], rgb[1] + mix[1], rgb[2] + mix[2]].map(function (x) { return Math.round(x / 2.0) })
+        //return "rgb(" + mixedrgb.join(",") + ")";
+        return randomHSL()
+      }
+      // Recent Report
+  
+    
+
+      let runnerDataOHSpeedSorted = runnerData.sort(dynamicSort("averageOHSpeed"))
+
+      $("#ttas_runner1").html(`${runnerDataOHSpeedSorted[0].plate} | ${runnerDataOHSpeedSorted[0].name}`)
+      $("#ttas_runner2").html(`${runnerDataOHSpeedSorted[1].plate} | ${runnerDataOHSpeedSorted[1].name}`)
+      $("#ttas_runner3").html(`${runnerDataOHSpeedSorted[2].plate} | ${runnerDataOHSpeedSorted[2].name}`)
+  
+  
+  
+      var elements = 10
+  
+      var ctx = document.getElementById("recent-rep-chart"); //top3speedchart
+      if (ctx) {
+        ctx.height = 275;
+        top3speedchart = new Chart(ctx, {
+          type: 'line',
+          labels: ["asdas"],
+          data: {
+            labels: topThreeAvgSpeeds.controlPoints,
+            datasets: [
+              {
+                label: topThreeAvgSpeeds.runner1.name,
+                backgroundColor: "rgba(166, 207, 151,0.8)",
+                borderColor: 'transparent',
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: topThreeAvgSpeeds.runner1.speeds
+  
+              },
+              {
+                label: topThreeAvgSpeeds.runner2.name,
+                backgroundColor: "rgba(38, 64, 139,0.8)",
+                borderColor: 'transparent',
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: topThreeAvgSpeeds.runner2.speeds
+  
+              },
+              {
+                label: topThreeAvgSpeeds.runner3.name,
+                backgroundColor: "rgba(13, 2, 33,0.8)",
+                borderColor: 'transparent',
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: topThreeAvgSpeeds.runner3.speeds
+  
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: true,
+            legend: {
+              display: false
+            },
+            responsive: true,
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  drawOnChartArea: true,
+                  color: '#f2f2f2'
+                },
+                ticks: {
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  maxTicksLimit: 5,
+                  stepSize: 50,
+                  max: 20,
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                },
+                gridLines: {
+                  display: true,
+                  color: '#f2f2f2'
+  
+                }
+              }]
+            },
+            elements: {
+              point: {
+                radius: 0,
+                hitRadius: 10,
+                hoverRadius: 4,
+                hoverBorderWidth: 3
+              }
+            }
+  
+  
+          }
+        });
+      }
+  
+      // Percent Chart
+      let runner1_fvld = runnerDataDistanceSorted[0]
+      let runner2_fvld = runnerDataDistanceSorted[runnerDataDistanceSorted.length - 1]
+      var ctx = document.getElementById("percent-chart");
+      if (ctx) {
+        ctx.height = 280;
+        $("#fvld_1").html(`${runner1_fvld.plate} | ${runner1_fvld.name}`)
+        $("#fvld_2").html (`${runner2_fvld.plate} | ${runner2_fvld.name}`)
+        var myChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [(runner1_fvld.distanceTraveled), (runner2_fvld.distanceTraveled)],
+                backgroundColor: [
+                  '#00b5e9',
+                  '#fa4251'
+                ],
+                hoverBackgroundColor: [
+                  '#00b5e9',
+                  '#fa4251'
+                ],
+                borderWidth: [
+                  0, 0
+                ],
+                hoverBorderColor: [
+                  'transparent',
+                  'transparent'
+                ]
+              }
+            ],
+            labels: [(`${runner1_fvld.plate} | ${runner1_fvld.name}`), (`${runner2_fvld.plate} | ${runner2_fvld.name}`)],
+          },
+          options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            cutoutPercentage: 55,
+            animation: {
+              animateScale: true,
+              animateRotate: true
+            },
+            legend: {
+              display: false
+            },
+            tooltips: {
+              titleFontFamily: "Poppins",
+              xPadding: 15,
+              yPadding: 10,
+              caretPadding: 0,
+              bodyFontSize: 16
+            }
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+  
+  
+    try {
+  
+      // Recent Report 2
+      const bd_brandProduct2 = 'rgba(0,181,233,0.9)'
+      const bd_brandService2 = 'rgba(0,173,95,0.9)'
+      const brandProduct2 = 'rgba(0,181,233,0.2)'
+      const brandService2 = 'rgba(0,173,95,0.2)'
+  
+      var data3 = [52, 60, 55, 50, 65, 80, 57, 70, 105, 115]
+      var data4 = [102, 70, 80, 100, 56, 53, 80, 75, 65, 90]
+  
+      var ctx = document.getElementById("recent-rep2-chart");
+      if (ctx) {
+        ctx.height = 230;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', ''],
+            datasets: [
+              {
+                label: 'My First dataset',
+                backgroundColor: brandService2,
+                borderColor: bd_brandService2,
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: data3
+  
+              },
+              {
+                label: 'My Second dataset',
+                backgroundColor: brandProduct2,
+                borderColor: bd_brandProduct2,
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: data4
+  
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: true,
+            legend: {
+              display: false
+            },
+            responsive: true,
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  drawOnChartArea: true,
+                  color: '#f2f2f2'
+                },
+                ticks: {
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  maxTicksLimit: 5,
+                  stepSize: 50,
+                  max: 150,
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                },
+                gridLines: {
+                  display: true,
+                  color: '#f2f2f2'
+  
+                }
+              }]
+            },
+            elements: {
+              point: {
+                radius: 0,
+                hitRadius: 10,
+                hoverRadius: 4,
+                hoverBorderWidth: 3
+              },
+              line: {
+                tension: 0
+              }
+            }
+  
+  
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+  
+    try {
+  
+      // Recent Report 3
+      const bd_brandProduct3 = 'rgba(0,181,233,0.9)';
+      const bd_brandService3 = 'rgba(0,173,95,0.9)';
+      const brandProduct3 = 'transparent';
+      const brandService3 = 'transparent';
+  
+      var data5 = [52, 60, 55, 50, 65, 80, 57, 115];
+      var data6 = [102, 70, 80, 100, 56, 53, 80, 90];
+  
+      var ctx = document.getElementById("recent-rep3-chart");
+      if (ctx) {
+        ctx.height = 230;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', ''],
+            datasets: [
+              {
+                label: 'My First dataset',
+                backgroundColor: brandService3,
+                borderColor: bd_brandService3,
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: data5,
+                pointBackgroundColor: bd_brandService3
+              },
+              {
+                label: 'My Second dataset',
+                backgroundColor: brandProduct3,
+                borderColor: bd_brandProduct3,
+                pointHoverBackgroundColor: '#fff',
+                borderWidth: 0,
+                data: data6,
+                pointBackgroundColor: bd_brandProduct3
+  
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: false,
+            legend: {
+              display: false
+            },
+            responsive: true,
+            scales: {
+              xAxes: [{
+                gridLines: {
+                  drawOnChartArea: true,
+                  color: '#f2f2f2'
+                },
+                ticks: {
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  maxTicksLimit: 5,
+                  stepSize: 50,
+                  max: 150,
+                  fontFamily: "Poppins",
+                  fontSize: 12
+                },
+                gridLines: {
+                  display: false,
+                  color: '#f2f2f2'
+                }
+              }]
+            },
+            elements: {
+              point: {
+                radius: 3,
+                hoverRadius: 4,
+                hoverBorderWidth: 3,
+                backgroundColor: '#333'
+              }
+            }
+  
+  
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+      //WidgetChart 5
+      var ctx = document.getElementById("widgetChart5");
+      if (ctx) {
+        ctx.height = 220;
+        var myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [78, 81, 80, 64, 65, 80, 70, 75, 67, 85, 66, 68],
+                borderColor: "transparent",
+                borderWidth: "0",
+                backgroundColor: "#ccc",
+              }
+            ]
+          },
+          options: {
+            maintainAspectRatio: true,
+            legend: {
+              display: false
+            },
+            scales: {
+              xAxes: [{
+                display: false,
+                categoryPercentage: 1,
+                barPercentage: 0.65
+              }],
+              yAxes: [{
+                display: false
+              }]
+            }
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+  
+      // Percent Chart 2
+      var ctx = document.getElementById("percent-chart2");
+      if (ctx) {
+        ctx.height = 209;
+        var myChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [60, 40],
+                backgroundColor: [
+                  '#00b5e9',
+                  '#fa4251'
+                ],
+                hoverBackgroundColor: [
+                  '#00b5e9',
+                  '#fa4251'
+                ],
+                borderWidth: [
+                  0, 0
+                ],
+                hoverBorderColor: [
+                  'transparent',
+                  'transparent'
+                ]
+              }
+            ],
+            labels: [
+              'Products',
+              'Services'
+            ]
+          },
+          options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            cutoutPercentage: 87,
+            animation: {
+              animateScale: true,
+              animateRotate: true
+            },
+            legend: {
+              display: false,
+              position: 'bottom',
+              labels: {
+                fontSize: 14,
+                fontFamily: "Poppins,sans-serif"
+              }
+  
+            },
+            tooltips: {
+              titleFontFamily: "Poppins",
+              xPadding: 15,
+              yPadding: 10,
+              caretPadding: 0,
+              bodyFontSize: 16,
+            }
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+      //Sales chart
+      var ctx = document.getElementById("sales-chart");
+      if (ctx) {
+        ctx.height = 150;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ["2010", "2011", "2012", "2013", "2014", "2015", "2016"],
+            type: 'line',
+            defaultFontFamily: 'Poppins',
+            datasets: [{
+              label: "Foods",
+              data: [0, 30, 10, 120, 50, 63, 10],
+              backgroundColor: 'transparent',
+              borderColor: 'rgba(220,53,69,0.75)',
+              borderWidth: 3,
+              pointStyle: 'circle',
+              pointRadius: 5,
+              pointBorderColor: 'transparent',
+              pointBackgroundColor: 'rgba(220,53,69,0.75)',
+            }, {
+              label: "Electronics",
+              data: [0, 50, 40, 80, 40, 79, 120],
+              backgroundColor: 'transparent',
+              borderColor: 'rgba(40,167,69,0.75)',
+              borderWidth: 3,
+              pointStyle: 'circle',
+              pointRadius: 5,
+              pointBorderColor: 'transparent',
+              pointBackgroundColor: 'rgba(40,167,69,0.75)',
+            }]
+          },
+          options: {
+            responsive: true,
+            tooltips: {
+              mode: 'index',
+              titleFontSize: 12,
+              titleFontColor: '#000',
+              bodyFontColor: '#000',
+              backgroundColor: '#fff',
+              titleFontFamily: 'Poppins',
+              bodyFontFamily: 'Poppins',
+              cornerRadius: 3,
+              intersect: false,
+            },
+            legend: {
+              display: false,
+              labels: {
+                usePointStyle: true,
+                fontFamily: 'Poppins',
+              },
+            },
+            scales: {
+              xAxes: [{
+                display: true,
+                gridLines: {
+                  display: false,
+                  drawBorder: false
+                },
+                scaleLabel: {
+                  display: false,
+                  labelString: 'Month'
+                },
+                ticks: {
+                  fontFamily: "Poppins"
+                }
+              }],
+              yAxes: [{
+                display: true,
+                gridLines: {
+                  display: false,
+                  drawBorder: false
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Value',
+                  fontFamily: "Poppins"
+  
+                },
+                ticks: {
+                  fontFamily: "Poppins"
+                }
+              }]
+            },
+            title: {
+              display: false,
+              text: 'Normal Legend'
+            }
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+  
+      //Team chart
+      var ctx = document.getElementById("team-chart");
+      if (ctx) {
+        ctx.height = 150;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ["2010", "2011", "2012", "2013", "2014", "2015", "2016"],
+            type: 'line',
+            defaultFontFamily: 'Poppins',
+            datasets: [{
+              data: [0, 7, 3, 5, 2, 10, 7],
+              label: "Expense",
+              backgroundColor: 'rgba(0,103,255,.15)',
+              borderColor: 'rgba(0,103,255,0.5)',
+              borderWidth: 3.5,
+              pointStyle: 'circle',
+              pointRadius: 5,
+              pointBorderColor: 'transparent',
+              pointBackgroundColor: 'rgba(0,103,255,0.5)',
+            },]
+          },
+          options: {
+            responsive: true,
+            tooltips: {
+              mode: 'index',
+              titleFontSize: 12,
+              titleFontColor: '#000',
+              bodyFontColor: '#000',
+              backgroundColor: '#fff',
+              titleFontFamily: 'Poppins',
+              bodyFontFamily: 'Poppins',
+              cornerRadius: 3,
+              intersect: false,
+            },
+            legend: {
+              display: false,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                fontFamily: 'Poppins',
+              },
+  
+  
+            },
+            scales: {
+              xAxes: [{
+                display: true,
+                gridLines: {
+                  display: false,
+                  drawBorder: false
+                },
+                scaleLabel: {
+                  display: false,
+                  labelString: 'Month'
+                },
+                ticks: {
+                  fontFamily: "Poppins"
+                }
+              }],
+              yAxes: [{
+                display: true,
+                gridLines: {
+                  display: false,
+                  drawBorder: false
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Value',
+                  fontFamily: "Poppins"
+                },
+                ticks: {
+                  fontFamily: "Poppins"
+                }
+              }]
+            },
+            title: {
+              display: false,
+            }
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+      //bar chart
+      var ctx = document.getElementById("barChart");
+      if (ctx) {
+        ctx.height = 200;
+        var myChart = new Chart(ctx, {
+          type: 'bar',
+          defaultFontFamily: 'Poppins',
+          data: {
+            labels: ["January", "February", "March", "April", "May", "June", "July"],
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [65, 59, 80, 81, 56, 55, 40],
+                borderColor: "rgba(0, 123, 255, 0.9)",
+                borderWidth: "0",
+                backgroundColor: "rgba(0, 123, 255, 0.5)",
+                fontFamily: "Poppins"
+              },
+              {
+                label: "My Second dataset",
+                data: [28, 48, 40, 19, 86, 27, 90],
+                borderColor: "rgba(0,0,0,0.09)",
+                borderWidth: "0",
+                backgroundColor: "rgba(0,0,0,0.07)",
+                fontFamily: "Poppins"
+              }
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            scales: {
+              xAxes: [{
+                ticks: {
+                  fontFamily: "Poppins"
+  
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  fontFamily: "Poppins"
+                }
+              }]
+            }
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+  
+      //radar chart
+      var ctx = document.getElementById("radarChart");
+      if (ctx) {
+        ctx.height = 200;
+        var myChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: [["Eating", "Dinner"], ["Drinking", "Water"], "Sleeping", ["Designing", "Graphics"], "Coding", "Cycling", "Running"],
+            defaultFontFamily: 'Poppins',
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [65, 59, 66, 45, 56, 55, 40],
+                borderColor: "rgba(0, 123, 255, 0.6)",
+                borderWidth: "1",
+                backgroundColor: "rgba(0, 123, 255, 0.4)"
+              },
+              {
+                label: "My Second dataset",
+                data: [28, 12, 40, 19, 63, 27, 87],
+                borderColor: "rgba(0, 123, 255, 0.7",
+                borderWidth: "1",
+                backgroundColor: "rgba(0, 123, 255, 0.5)"
+              }
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            scale: {
+              ticks: {
+                beginAtZero: true,
+                fontFamily: "Poppins"
+              }
+            }
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error)
+    }
+  
+    try {
+  
+      //line chart
+      var ctx = document.getElementById("lineChart");
+      if (ctx) {
+        ctx.height = 150;
+        var myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ["January", "February", "March", "April", "May", "June", "July"],
+            defaultFontFamily: "Poppins",
+            datasets: [
+              {
+                label: "My First dataset",
+                borderColor: "rgba(0,0,0,.09)",
+                borderWidth: "1",
+                backgroundColor: "rgba(0,0,0,.07)",
+                data: [22, 44, 67, 43, 76, 45, 12]
+              },
+              {
+                label: "My Second dataset",
+                borderColor: "rgba(0, 123, 255, 0.9)",
+                borderWidth: "1",
+                backgroundColor: "rgba(0, 123, 255, 0.5)",
+                pointHighlightStroke: "rgba(26,179,148,1)",
+                data: [16, 32, 18, 26, 42, 33, 44]
+              }
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            responsive: true,
+            tooltips: {
+              mode: 'index',
+              intersect: false
+            },
+            hover: {
+              mode: 'nearest',
+              intersect: true
+            },
+            scales: {
+              xAxes: [{
+                ticks: {
+                  fontFamily: "Poppins"
+  
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  fontFamily: "Poppins"
+                }
+              }]
+            }
+  
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+  
+    try {
+  
+      //doughut chart
+      var ctx = document.getElementById("doughutChart");
+      if (ctx) {
+        ctx.height = 150;
+        var myChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [{
+              data: [45, 25, 20, 10],
+              backgroundColor: [
+                "rgba(0, 123, 255,0.9)",
+                "rgba(0, 123, 255,0.7)",
+                "rgba(0, 123, 255,0.5)",
+                "rgba(0,0,0,0.07)"
+              ],
+              hoverBackgroundColor: [
+                "rgba(0, 123, 255,0.9)",
+                "rgba(0, 123, 255,0.7)",
+                "rgba(0, 123, 255,0.5)",
+                "rgba(0,0,0,0.07)"
+              ]
+  
+            }],
+            labels: [
+              "Green",
+              "Green",
+              "Green",
+              "Green"
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            responsive: true
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+  
+    try {
+  
+      //pie chart
+      var ctx = document.getElementById("pieChart");
+      if (ctx) {
+        ctx.height = 200;
+        var myChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            datasets: [{
+              data: [45, 25, 20, 10],
+              backgroundColor: [
+                "rgba(0, 123, 255,0.9)",
+                "rgba(0, 123, 255,0.7)",
+                "rgba(0, 123, 255,0.5)",
+                "rgba(0,0,0,0.07)"
+              ],
+              hoverBackgroundColor: [
+                "rgba(0, 123, 255,0.9)",
+                "rgba(0, 123, 255,0.7)",
+                "rgba(0, 123, 255,0.5)",
+                "rgba(0,0,0,0.07)"
+              ]
+  
+            }],
+            labels: [
+              "Green",
+              "Green",
+              "Green"
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            responsive: true
+          }
+        });
+      }
+  
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+  
+      // polar chart
+      var ctx = document.getElementById("polarChart");
+      if (ctx) {
+        ctx.height = 200;
+        var myChart = new Chart(ctx, {
+          type: 'polarArea',
+          data: {
+            datasets: [{
+              data: [15, 18, 9, 6, 19],
+              backgroundColor: [
+                "rgba(0, 123, 255,0.9)",
+                "rgba(0, 123, 255,0.8)",
+                "rgba(0, 123, 255,0.7)",
+                "rgba(0,0,0,0.2)",
+                "rgba(0, 123, 255,0.5)"
+              ]
+  
+            }],
+            labels: [
+              "Green",
+              "Green",
+              "Green",
+              "Green"
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            responsive: true
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+    try {
+  
+      // single bar chart
+      var ctx = document.getElementById("singelBarChart");
+      if (ctx) {
+        ctx.height = 150;
+        var myChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ["Sun", "Mon", "Tu", "Wed", "Th", "Fri", "Sat"],
+            datasets: [
+              {
+                label: "My First dataset",
+                data: [40, 55, 75, 81, 56, 55, 40],
+                borderColor: "rgba(0, 123, 255, 0.9)",
+                borderWidth: "0",
+                backgroundColor: "rgba(0, 123, 255, 0.5)"
+              }
+            ]
+          },
+          options: {
+            legend: {
+              position: 'top',
+              labels: {
+                fontFamily: 'Poppins'
+              }
+  
+            },
+            scales: {
+              xAxes: [{
+                ticks: {
+                  fontFamily: "Poppins"
+  
+                }
+              }],
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true,
+                  fontFamily: "Poppins"
+                }
+              }]
+            }
+          }
+        });
+      }
+  
+    } catch (error) {
+      console.log(error);
+    }
+  
+}
+
+
+
 
 (function ($) {
   // USE STRICT
   "use strict";
-
-  try {
-    //WidgetChart 1
-    var ctx = document.getElementById("widgetChart1");
-    if (ctx) {
-      ctx.height = 130;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-          type: 'line',
-          datasets: [{
-            data: [78, 81, 80, 45, 34, 12, 40],
-            label: 'Dataset',
-            backgroundColor: 'rgba(255,255,255,.1)',
-            borderColor: 'rgba(255,255,255,.55)',
-          },]
-        },
-        options: {
-          maintainAspectRatio: true,
-          legend: {
-            display: false
-          },
-          layout: {
-            padding: {
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 0
-            }
-          },
-          responsive: true,
-          scales: {
-            xAxes: [{
-              gridLines: {
-                color: 'transparent',
-                zeroLineColor: 'transparent'
-              },
-              ticks: {
-                fontSize: 2,
-                fontColor: 'transparent'
-              }
-            }],
-            yAxes: [{
-              display: false,
-              ticks: {
-                display: false,
-              }
-            }]
-          },
-          title: {
-            display: false,
-          },
-          elements: {
-            line: {
-              borderWidth: 0
-            },
-            point: {
-              radius: 0,
-              hitRadius: 10,
-              hoverRadius: 4
-            }
-          }
-        }
-      });
+  var navbars = ['header', 'aside'];
+  var hrefSelector = 'a:not([target="_blank"]):not([href^="#"]):not([class^="chosen-single"])';
+  var linkElement = navbars.map(element => element + ' ' + hrefSelector).join(', ');
+  $(".animsition").animsition({
+    inClass: 'fade-in',
+    outClass: 'fade-out',
+    inDuration: 900,
+    outDuration: 900,
+    linkElement: linkElement,
+    loading: true,
+    loadingParentElement: 'html',
+    loadingClass: 'page-loader',
+    loadingInner: '<div class="page-loader__spin"></div>',
+    timeout: false,
+    timeoutCountdown: 5000,
+    onLoadEvent: true,
+    browser: ['animation-duration', '-webkit-animation-duration'],
+    overlay: false,
+    overlayClass: 'animsition-overlay-slide',
+    overlayParentElement: 'html',
+    transition: function (url) {
+      window.location.href = url;
     }
+  });
 
-
-    //WidgetChart 2
-    var ctx = document.getElementById("widgetChart2");
-    if (ctx) {
-      ctx.height = 130;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June'],
-          type: 'line',
-          datasets: [{
-            data: [1, 18, 9, 17, 34, 22],
-            label: 'Dataset',
-            backgroundColor: 'transparent',
-            borderColor: 'rgba(255,255,255,.55)',
-          },]
-        },
-        options: {
-
-          maintainAspectRatio: false,
-          legend: {
-            display: false
-          },
-          responsive: true,
-          tooltips: {
-            mode: 'index',
-            titleFontSize: 12,
-            titleFontColor: '#000',
-            bodyFontColor: '#000',
-            backgroundColor: '#fff',
-            titleFontFamily: 'Montserrat',
-            bodyFontFamily: 'Montserrat',
-            cornerRadius: 3,
-            intersect: false,
-          },
-          scales: {
-            xAxes: [{
-              gridLines: {
-                color: 'transparent',
-                zeroLineColor: 'transparent'
-              },
-              ticks: {
-                fontSize: 2,
-                fontColor: 'transparent'
-              }
-            }],
-            yAxes: [{
-              display: false,
-              ticks: {
-                display: false,
-              }
-            }]
-          },
-          title: {
-            display: false,
-          },
-          elements: {
-            line: {
-              tension: 0.00001,
-              borderWidth: 1
-            },
-            point: {
-              radius: 4,
-              hitRadius: 10,
-              hoverRadius: 4
-            }
-          }
-        }
-      });
-    }
-
-
-    //WidgetChart 3
-    var ctx = document.getElementById("widgetChart3");
-    if (ctx) {
-      ctx.height = 130;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June'],
-          type: 'line',
-          datasets: [{
-            data: [65, 59, 84, 84, 51, 55],
-            label: 'Dataset',
-            backgroundColor: 'transparent',
-            borderColor: 'rgba(255,255,255,.55)',
-          },]
-        },
-        options: {
-
-          maintainAspectRatio: false,
-          legend: {
-            display: false
-          },
-          responsive: true,
-          tooltips: {
-            mode: 'index',
-            titleFontSize: 12,
-            titleFontColor: '#000',
-            bodyFontColor: '#000',
-            backgroundColor: '#fff',
-            titleFontFamily: 'Montserrat',
-            bodyFontFamily: 'Montserrat',
-            cornerRadius: 3,
-            intersect: false,
-          },
-          scales: {
-            xAxes: [{
-              gridLines: {
-                color: 'transparent',
-                zeroLineColor: 'transparent'
-              },
-              ticks: {
-                fontSize: 2,
-                fontColor: 'transparent'
-              }
-            }],
-            yAxes: [{
-              display: false,
-              ticks: {
-                display: false,
-              }
-            }]
-          },
-          title: {
-            display: false,
-          },
-          elements: {
-            line: {
-              borderWidth: 1
-            },
-            point: {
-              radius: 4,
-              hitRadius: 10,
-              hoverRadius: 4
-            }
-          }
-        }
-      });
-    }
-
-
-    //WidgetChart 4
-    var ctx = document.getElementById("widgetChart4");
-    if (ctx) {
-      ctx.height = 115;
-      var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [78, 81, 80, 65, 58, 75, 60, 75, 65, 60, 60, 75],
-              borderColor: "transparent",
-              borderWidth: "0",
-              backgroundColor: "rgba(255,255,255,.3)"
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: true,
-          legend: {
-            display: false
-          },
-          scales: {
-            xAxes: [{
-              display: false,
-              categoryPercentage: 1,
-              barPercentage: 0.65
-            }],
-            yAxes: [{
-              display: false
-            }]
-          }
-        }
-      });
-    }
-
-    // Recent Report
-    const brandProduct = 'rgba(0,181,233,0.8)'
-    const brandService = 'rgba(0,173,95,0.8)'
-
-    var elements = 10
-    var data1 = [52, 60, 55, 50, 65, 80, 57, 70, 105, 115]
-    var data2 = [102, 70, 80, 100, 56, 53, 80, 75, 65, 90]
-
-    var ctx = document.getElementById("recent-rep-chart");
-    if (ctx) {
-      ctx.height = 250;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', ''],
-          datasets: [
-            {
-              label: 'My First dataset',
-              backgroundColor: brandService,
-              borderColor: 'transparent',
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data1
-
-            },
-            {
-              label: 'My Second dataset',
-              backgroundColor: brandProduct,
-              borderColor: 'transparent',
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data2
-
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: true,
-          legend: {
-            display: false
-          },
-          responsive: true,
-          scales: {
-            xAxes: [{
-              gridLines: {
-                drawOnChartArea: true,
-                color: '#f2f2f2'
-              },
-              ticks: {
-                fontFamily: "Poppins",
-                fontSize: 12
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                maxTicksLimit: 5,
-                stepSize: 50,
-                max: 150,
-                fontFamily: "Poppins",
-                fontSize: 12
-              },
-              gridLines: {
-                display: true,
-                color: '#f2f2f2'
-
-              }
-            }]
-          },
-          elements: {
-            point: {
-              radius: 0,
-              hitRadius: 10,
-              hoverRadius: 4,
-              hoverBorderWidth: 3
-            }
-          }
-
-
-        }
-      });
-    }
-
-    // Percent Chart
-    var ctx = document.getElementById("percent-chart");
-    if (ctx) {
-      ctx.height = 280;
-      var myChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [60, 40],
-              backgroundColor: [
-                '#00b5e9',
-                '#fa4251'
-              ],
-              hoverBackgroundColor: [
-                '#00b5e9',
-                '#fa4251'
-              ],
-              borderWidth: [
-                0, 0
-              ],
-              hoverBorderColor: [
-                'transparent',
-                'transparent'
-              ]
-            }
-          ],
-          labels: [
-            'Products',
-            'Services'
-          ]
-        },
-        options: {
-          maintainAspectRatio: false,
-          responsive: true,
-          cutoutPercentage: 55,
-          animation: {
-            animateScale: true,
-            animateRotate: true
-          },
-          legend: {
-            display: false
-          },
-          tooltips: {
-            titleFontFamily: "Poppins",
-            xPadding: 15,
-            yPadding: 10,
-            caretPadding: 0,
-            bodyFontSize: 16
-          }
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-
-
-  try {
-
-    // Recent Report 2
-    const bd_brandProduct2 = 'rgba(0,181,233,0.9)'
-    const bd_brandService2 = 'rgba(0,173,95,0.9)'
-    const brandProduct2 = 'rgba(0,181,233,0.2)'
-    const brandService2 = 'rgba(0,173,95,0.2)'
-
-    var data3 = [52, 60, 55, 50, 65, 80, 57, 70, 105, 115]
-    var data4 = [102, 70, 80, 100, 56, 53, 80, 75, 65, 90]
-
-    var ctx = document.getElementById("recent-rep2-chart");
-    if (ctx) {
-      ctx.height = 230;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', ''],
-          datasets: [
-            {
-              label: 'My First dataset',
-              backgroundColor: brandService2,
-              borderColor: bd_brandService2,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data3
-
-            },
-            {
-              label: 'My Second dataset',
-              backgroundColor: brandProduct2,
-              borderColor: bd_brandProduct2,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data4
-
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: true,
-          legend: {
-            display: false
-          },
-          responsive: true,
-          scales: {
-            xAxes: [{
-              gridLines: {
-                drawOnChartArea: true,
-                color: '#f2f2f2'
-              },
-              ticks: {
-                fontFamily: "Poppins",
-                fontSize: 12
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                maxTicksLimit: 5,
-                stepSize: 50,
-                max: 150,
-                fontFamily: "Poppins",
-                fontSize: 12
-              },
-              gridLines: {
-                display: true,
-                color: '#f2f2f2'
-
-              }
-            }]
-          },
-          elements: {
-            point: {
-              radius: 0,
-              hitRadius: 10,
-              hoverRadius: 4,
-              hoverBorderWidth: 3
-            },
-            line: {
-              tension: 0
-            }
-          }
-
-
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-
-  try {
-
-    // Recent Report 3
-    const bd_brandProduct3 = 'rgba(0,181,233,0.9)';
-    const bd_brandService3 = 'rgba(0,173,95,0.9)';
-    const brandProduct3 = 'transparent';
-    const brandService3 = 'transparent';
-
-    var data5 = [52, 60, 55, 50, 65, 80, 57, 115];
-    var data6 = [102, 70, 80, 100, 56, 53, 80, 90];
-
-    var ctx = document.getElementById("recent-rep3-chart");
-    if (ctx) {
-      ctx.height = 230;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', ''],
-          datasets: [
-            {
-              label: 'My First dataset',
-              backgroundColor: brandService3,
-              borderColor: bd_brandService3,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data5,
-              pointBackgroundColor: bd_brandService3
-            },
-            {
-              label: 'My Second dataset',
-              backgroundColor: brandProduct3,
-              borderColor: bd_brandProduct3,
-              pointHoverBackgroundColor: '#fff',
-              borderWidth: 0,
-              data: data6,
-              pointBackgroundColor: bd_brandProduct3
-
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: false,
-          legend: {
-            display: false
-          },
-          responsive: true,
-          scales: {
-            xAxes: [{
-              gridLines: {
-                drawOnChartArea: true,
-                color: '#f2f2f2'
-              },
-              ticks: {
-                fontFamily: "Poppins",
-                fontSize: 12
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                maxTicksLimit: 5,
-                stepSize: 50,
-                max: 150,
-                fontFamily: "Poppins",
-                fontSize: 12
-              },
-              gridLines: {
-                display: false,
-                color: '#f2f2f2'
-              }
-            }]
-          },
-          elements: {
-            point: {
-              radius: 3,
-              hoverRadius: 4,
-              hoverBorderWidth: 3,
-              backgroundColor: '#333'
-            }
-          }
-
-
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-    //WidgetChart 5
-    var ctx = document.getElementById("widgetChart5");
-    if (ctx) {
-      ctx.height = 220;
-      var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [78, 81, 80, 64, 65, 80, 70, 75, 67, 85, 66, 68],
-              borderColor: "transparent",
-              borderWidth: "0",
-              backgroundColor: "#ccc",
-            }
-          ]
-        },
-        options: {
-          maintainAspectRatio: true,
-          legend: {
-            display: false
-          },
-          scales: {
-            xAxes: [{
-              display: false,
-              categoryPercentage: 1,
-              barPercentage: 0.65
-            }],
-            yAxes: [{
-              display: false
-            }]
-          }
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-
-    // Percent Chart 2
-    var ctx = document.getElementById("percent-chart2");
-    if (ctx) {
-      ctx.height = 209;
-      var myChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [60, 40],
-              backgroundColor: [
-                '#00b5e9',
-                '#fa4251'
-              ],
-              hoverBackgroundColor: [
-                '#00b5e9',
-                '#fa4251'
-              ],
-              borderWidth: [
-                0, 0
-              ],
-              hoverBorderColor: [
-                'transparent',
-                'transparent'
-              ]
-            }
-          ],
-          labels: [
-            'Products',
-            'Services'
-          ]
-        },
-        options: {
-          maintainAspectRatio: false,
-          responsive: true,
-          cutoutPercentage: 87,
-          animation: {
-            animateScale: true,
-            animateRotate: true
-          },
-          legend: {
-            display: false,
-            position: 'bottom',
-            labels: {
-              fontSize: 14,
-              fontFamily: "Poppins,sans-serif"
-            }
-
-          },
-          tooltips: {
-            titleFontFamily: "Poppins",
-            xPadding: 15,
-            yPadding: 10,
-            caretPadding: 0,
-            bodyFontSize: 16,
-          }
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-    //Sales chart
-    var ctx = document.getElementById("sales-chart");
-    if (ctx) {
-      ctx.height = 150;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ["2010", "2011", "2012", "2013", "2014", "2015", "2016"],
-          type: 'line',
-          defaultFontFamily: 'Poppins',
-          datasets: [{
-            label: "Foods",
-            data: [0, 30, 10, 120, 50, 63, 10],
-            backgroundColor: 'transparent',
-            borderColor: 'rgba(220,53,69,0.75)',
-            borderWidth: 3,
-            pointStyle: 'circle',
-            pointRadius: 5,
-            pointBorderColor: 'transparent',
-            pointBackgroundColor: 'rgba(220,53,69,0.75)',
-          }, {
-            label: "Electronics",
-            data: [0, 50, 40, 80, 40, 79, 120],
-            backgroundColor: 'transparent',
-            borderColor: 'rgba(40,167,69,0.75)',
-            borderWidth: 3,
-            pointStyle: 'circle',
-            pointRadius: 5,
-            pointBorderColor: 'transparent',
-            pointBackgroundColor: 'rgba(40,167,69,0.75)',
-          }]
-        },
-        options: {
-          responsive: true,
-          tooltips: {
-            mode: 'index',
-            titleFontSize: 12,
-            titleFontColor: '#000',
-            bodyFontColor: '#000',
-            backgroundColor: '#fff',
-            titleFontFamily: 'Poppins',
-            bodyFontFamily: 'Poppins',
-            cornerRadius: 3,
-            intersect: false,
-          },
-          legend: {
-            display: false,
-            labels: {
-              usePointStyle: true,
-              fontFamily: 'Poppins',
-            },
-          },
-          scales: {
-            xAxes: [{
-              display: true,
-              gridLines: {
-                display: false,
-                drawBorder: false
-              },
-              scaleLabel: {
-                display: false,
-                labelString: 'Month'
-              },
-              ticks: {
-                fontFamily: "Poppins"
-              }
-            }],
-            yAxes: [{
-              display: true,
-              gridLines: {
-                display: false,
-                drawBorder: false
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Value',
-                fontFamily: "Poppins"
-
-              },
-              ticks: {
-                fontFamily: "Poppins"
-              }
-            }]
-          },
-          title: {
-            display: false,
-            text: 'Normal Legend'
-          }
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-
-    //Team chart
-    var ctx = document.getElementById("team-chart");
-    if (ctx) {
-      ctx.height = 150;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ["2010", "2011", "2012", "2013", "2014", "2015", "2016"],
-          type: 'line',
-          defaultFontFamily: 'Poppins',
-          datasets: [{
-            data: [0, 7, 3, 5, 2, 10, 7],
-            label: "Expense",
-            backgroundColor: 'rgba(0,103,255,.15)',
-            borderColor: 'rgba(0,103,255,0.5)',
-            borderWidth: 3.5,
-            pointStyle: 'circle',
-            pointRadius: 5,
-            pointBorderColor: 'transparent',
-            pointBackgroundColor: 'rgba(0,103,255,0.5)',
-          },]
-        },
-        options: {
-          responsive: true,
-          tooltips: {
-            mode: 'index',
-            titleFontSize: 12,
-            titleFontColor: '#000',
-            bodyFontColor: '#000',
-            backgroundColor: '#fff',
-            titleFontFamily: 'Poppins',
-            bodyFontFamily: 'Poppins',
-            cornerRadius: 3,
-            intersect: false,
-          },
-          legend: {
-            display: false,
-            position: 'top',
-            labels: {
-              usePointStyle: true,
-              fontFamily: 'Poppins',
-            },
-
-
-          },
-          scales: {
-            xAxes: [{
-              display: true,
-              gridLines: {
-                display: false,
-                drawBorder: false
-              },
-              scaleLabel: {
-                display: false,
-                labelString: 'Month'
-              },
-              ticks: {
-                fontFamily: "Poppins"
-              }
-            }],
-            yAxes: [{
-              display: true,
-              gridLines: {
-                display: false,
-                drawBorder: false
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Value',
-                fontFamily: "Poppins"
-              },
-              ticks: {
-                fontFamily: "Poppins"
-              }
-            }]
-          },
-          title: {
-            display: false,
-          }
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-    //bar chart
-    var ctx = document.getElementById("barChart");
-    if (ctx) {
-      ctx.height = 200;
-      var myChart = new Chart(ctx, {
-        type: 'bar',
-        defaultFontFamily: 'Poppins',
-        data: {
-          labels: ["January", "February", "March", "April", "May", "June", "July"],
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [65, 59, 80, 81, 56, 55, 40],
-              borderColor: "rgba(0, 123, 255, 0.9)",
-              borderWidth: "0",
-              backgroundColor: "rgba(0, 123, 255, 0.5)",
-              fontFamily: "Poppins"
-            },
-            {
-              label: "My Second dataset",
-              data: [28, 48, 40, 19, 86, 27, 90],
-              borderColor: "rgba(0,0,0,0.09)",
-              borderWidth: "0",
-              backgroundColor: "rgba(0,0,0,0.07)",
-              fontFamily: "Poppins"
-            }
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          scales: {
-            xAxes: [{
-              ticks: {
-                fontFamily: "Poppins"
-
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                fontFamily: "Poppins"
-              }
-            }]
-          }
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-
-    //radar chart
-    var ctx = document.getElementById("radarChart");
-    if (ctx) {
-      ctx.height = 200;
-      var myChart = new Chart(ctx, {
-        type: 'radar',
-        data: {
-          labels: [["Eating", "Dinner"], ["Drinking", "Water"], "Sleeping", ["Designing", "Graphics"], "Coding", "Cycling", "Running"],
-          defaultFontFamily: 'Poppins',
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [65, 59, 66, 45, 56, 55, 40],
-              borderColor: "rgba(0, 123, 255, 0.6)",
-              borderWidth: "1",
-              backgroundColor: "rgba(0, 123, 255, 0.4)"
-            },
-            {
-              label: "My Second dataset",
-              data: [28, 12, 40, 19, 63, 27, 87],
-              borderColor: "rgba(0, 123, 255, 0.7",
-              borderWidth: "1",
-              backgroundColor: "rgba(0, 123, 255, 0.5)"
-            }
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          scale: {
-            ticks: {
-              beginAtZero: true,
-              fontFamily: "Poppins"
-            }
-          }
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error)
-  }
-
-  try {
-
-    //line chart
-    var ctx = document.getElementById("lineChart");
-    if (ctx) {
-      ctx.height = 150;
-      var myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: ["January", "February", "March", "April", "May", "June", "July"],
-          defaultFontFamily: "Poppins",
-          datasets: [
-            {
-              label: "My First dataset",
-              borderColor: "rgba(0,0,0,.09)",
-              borderWidth: "1",
-              backgroundColor: "rgba(0,0,0,.07)",
-              data: [22, 44, 67, 43, 76, 45, 12]
-            },
-            {
-              label: "My Second dataset",
-              borderColor: "rgba(0, 123, 255, 0.9)",
-              borderWidth: "1",
-              backgroundColor: "rgba(0, 123, 255, 0.5)",
-              pointHighlightStroke: "rgba(26,179,148,1)",
-              data: [16, 32, 18, 26, 42, 33, 44]
-            }
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          responsive: true,
-          tooltips: {
-            mode: 'index',
-            intersect: false
-          },
-          hover: {
-            mode: 'nearest',
-            intersect: true
-          },
-          scales: {
-            xAxes: [{
-              ticks: {
-                fontFamily: "Poppins"
-
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                fontFamily: "Poppins"
-              }
-            }]
-          }
-
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-
-  try {
-
-    //doughut chart
-    var ctx = document.getElementById("doughutChart");
-    if (ctx) {
-      ctx.height = 150;
-      var myChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          datasets: [{
-            data: [45, 25, 20, 10],
-            backgroundColor: [
-              "rgba(0, 123, 255,0.9)",
-              "rgba(0, 123, 255,0.7)",
-              "rgba(0, 123, 255,0.5)",
-              "rgba(0,0,0,0.07)"
-            ],
-            hoverBackgroundColor: [
-              "rgba(0, 123, 255,0.9)",
-              "rgba(0, 123, 255,0.7)",
-              "rgba(0, 123, 255,0.5)",
-              "rgba(0,0,0,0.07)"
-            ]
-
-          }],
-          labels: [
-            "Green",
-            "Green",
-            "Green",
-            "Green"
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          responsive: true
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-
-  try {
-
-    //pie chart
-    var ctx = document.getElementById("pieChart");
-    if (ctx) {
-      ctx.height = 200;
-      var myChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-          datasets: [{
-            data: [45, 25, 20, 10],
-            backgroundColor: [
-              "rgba(0, 123, 255,0.9)",
-              "rgba(0, 123, 255,0.7)",
-              "rgba(0, 123, 255,0.5)",
-              "rgba(0,0,0,0.07)"
-            ],
-            hoverBackgroundColor: [
-              "rgba(0, 123, 255,0.9)",
-              "rgba(0, 123, 255,0.7)",
-              "rgba(0, 123, 255,0.5)",
-              "rgba(0,0,0,0.07)"
-            ]
-
-          }],
-          labels: [
-            "Green",
-            "Green",
-            "Green"
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          responsive: true
-        }
-      });
-    }
-
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-
-    // polar chart
-    var ctx = document.getElementById("polarChart");
-    if (ctx) {
-      ctx.height = 200;
-      var myChart = new Chart(ctx, {
-        type: 'polarArea',
-        data: {
-          datasets: [{
-            data: [15, 18, 9, 6, 19],
-            backgroundColor: [
-              "rgba(0, 123, 255,0.9)",
-              "rgba(0, 123, 255,0.8)",
-              "rgba(0, 123, 255,0.7)",
-              "rgba(0,0,0,0.2)",
-              "rgba(0, 123, 255,0.5)"
-            ]
-
-          }],
-          labels: [
-            "Green",
-            "Green",
-            "Green",
-            "Green"
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          responsive: true
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
-
-  try {
-
-    // single bar chart
-    var ctx = document.getElementById("singelBarChart");
-    if (ctx) {
-      ctx.height = 150;
-      var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ["Sun", "Mon", "Tu", "Wed", "Th", "Fri", "Sat"],
-          datasets: [
-            {
-              label: "My First dataset",
-              data: [40, 55, 75, 81, 56, 55, 40],
-              borderColor: "rgba(0, 123, 255, 0.9)",
-              borderWidth: "0",
-              backgroundColor: "rgba(0, 123, 255, 0.5)"
-            }
-          ]
-        },
-        options: {
-          legend: {
-            position: 'top',
-            labels: {
-              fontFamily: 'Poppins'
-            }
-
-          },
-          scales: {
-            xAxes: [{
-              ticks: {
-                fontFamily: "Poppins"
-
-              }
-            }],
-            yAxes: [{
-              ticks: {
-                beginAtZero: true,
-                fontFamily: "Poppins"
-              }
-            }]
-          }
-        }
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-  }
 
 })(jQuery);
-
-
-
-(function ($) {
-    // USE STRICT
-    "use strict";
-    var navbars = ['header', 'aside'];
-    var hrefSelector = 'a:not([target="_blank"]):not([href^="#"]):not([class^="chosen-single"])';
-    var linkElement = navbars.map(element => element + ' ' + hrefSelector).join(', ');
-    $(".animsition").animsition({
-      inClass: 'fade-in',
-      outClass: 'fade-out',
-      inDuration: 900,
-      outDuration: 900,
-      linkElement: linkElement,
-      loading: true,
-      loadingParentElement: 'html',
-      loadingClass: 'page-loader',
-      loadingInner: '<div class="page-loader__spin"></div>',
-      timeout: false,
-      timeoutCountdown: 5000,
-      onLoadEvent: true,
-      browser: ['animation-duration', '-webkit-animation-duration'],
-      overlay: false,
-      overlayClass: 'animsition-overlay-slide',
-      overlayParentElement: 'html',
-      transition: function (url) {
-        window.location.href = url;
-      }
-    });
-  
-  
-  })(jQuery);
 (function ($) {
   // USE STRICT
   "use strict";
@@ -1290,8 +1430,8 @@
   try {
 
     var vmap = $('#vmap');
-    if(vmap[0]) {
-      vmap.vectorMap( {
+    if (vmap[0]) {
+      /*vmap.vectorMap( {
         map: 'world_en',
         backgroundColor: null,
         color: '#ffffff',
@@ -1303,6 +1443,12 @@
         scaleColors: [ '#1de9b6', '#03a9f5'],
         normalizeFunction: 'polynomial'
       });
+      */
+      var mymap = L.map('vmap').setView([51.505, -0.09], 13);
+      L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+      }).addTo(mymap);
     }
 
   } catch (error) {
@@ -1311,10 +1457,10 @@
 
   // Europe Map
   try {
-    
+
     var vmap1 = $('#vmap1');
-    if(vmap1[0]) {
-      vmap1.vectorMap( {
+    if (vmap1[0]) {
+      vmap1.vectorMap({
         map: 'europe_en',
         color: '#007BFF',
         borderColor: '#fff',
@@ -1330,11 +1476,11 @@
 
   // USA Map
   try {
-    
+
     var vmap2 = $('#vmap2');
 
-    if(vmap2[0]) {
-      vmap2.vectorMap( {
+    if (vmap2[0]) {
+      vmap2.vectorMap({
         map: 'usa_en',
         color: '#007BFF',
         borderColor: '#fff',
@@ -1344,12 +1490,12 @@
         selectedColor: null,
         hoverColor: null,
         colors: {
-            mo: '#001BFF',
-            fl: '#001BFF',
-            or: '#001BFF'
+          mo: '#001BFF',
+          fl: '#001BFF',
+          or: '#001BFF'
         },
-        onRegionClick: function ( event, code, region ) {
-            event.preventDefault();
+        onRegionClick: function (event, code, region) {
+          event.preventDefault();
         }
       });
     }
@@ -1360,32 +1506,32 @@
 
   // Germany Map
   try {
-    
+
     var vmap3 = $('#vmap3');
-    if(vmap3[0]) {
-      vmap3.vectorMap( {
+    if (vmap3[0]) {
+      vmap3.vectorMap({
         map: 'germany_en',
         color: '#007BFF',
         borderColor: '#fff',
         backgroundColor: '#fff',
-        onRegionClick: function ( element, code, region ) {
-            var message = 'You clicked "' + region + '" which has the code: ' + code.toUpperCase();
+        onRegionClick: function (element, code, region) {
+          var message = 'You clicked "' + region + '" which has the code: ' + code.toUpperCase();
 
-            alert( message );
+          alert(message);
         }
       });
     }
-    
+
   } catch (error) {
     console.log(error);
   }
-  
+
   // France Map
   try {
-    
+
     var vmap4 = $('#vmap4');
-    if(vmap4[0]) {
-      vmap4.vectorMap( {
+    if (vmap4[0]) {
+      vmap4.vectorMap({
         map: 'france_fr',
         color: '#007BFF',
         borderColor: '#fff',
@@ -1402,8 +1548,8 @@
   // Russia Map
   try {
     var vmap5 = $('#vmap5');
-    if(vmap5[0]) {
-      vmap5.vectorMap( {
+    if (vmap5[0]) {
+      vmap5.vectorMap({
         map: 'russia_en',
         color: '#007BFF',
         borderColor: '#fff',
@@ -1412,7 +1558,7 @@
         selectedColor: '#999999',
         enableZoom: true,
         showTooltip: true,
-        scaleColors: [ '#C8EEFF', '#006491' ],
+        scaleColors: ['#C8EEFF', '#006491'],
         normalizeFunction: 'polynomial'
       });
     }
@@ -1421,20 +1567,20 @@
   } catch (error) {
     console.log(error);
   }
-  
+
   // Brazil Map
   try {
-    
+
     var vmap6 = $('#vmap6');
-    if(vmap6[0]) {
-      vmap6.vectorMap( {
+    if (vmap6[0]) {
+      vmap6.vectorMap({
         map: 'brazil_br',
         color: '#007BFF',
         borderColor: '#fff',
         backgroundColor: '#fff',
-        onRegionClick: function ( element, code, region ) {
-            var message = 'You clicked "' + region + '" which has the code: ' + code.toUpperCase();
-            alert( message );
+        onRegionClick: function (element, code, region) {
+          var message = 'You clicked "' + region + '" which has the code: ' + code.toUpperCase();
+          alert(message);
         }
       });
     }
@@ -1464,8 +1610,8 @@
             });
           }
         }, {
-            offset: 'bottom-in-view'
-          });
+          offset: 'bottom-in-view'
+        });
 
       });
     });
@@ -1480,8 +1626,8 @@
   // Scroll Bar
   try {
     var jscr1 = $('.js-scrollbar1');
-    if(jscr1[0]) {
-      const ps1 = new PerfectScrollbar('.js-scrollbar1');      
+    if (jscr1[0]) {
+      const ps1 = new PerfectScrollbar('.js-scrollbar1');
     }
 
     var jscr2 = $('.js-scrollbar2');
@@ -1527,7 +1673,7 @@
     for (var i = 0; i < menu.length; i++) {
       $(menu[i]).on('click', function (e) {
         e.preventDefault();
-        $('.js-right-sidebar').removeClass("show-sidebar");        
+        $('.js-right-sidebar').removeClass("show-sidebar");
         if (jQuery.inArray(this, menu) == sub_menu_is_showed) {
           $(this).toggleClass('show-dropdown');
           sub_menu_is_showed = -1;
@@ -1557,28 +1703,28 @@
   }
 
   var wW = $(window).width();
-    // Right Sidebar
-    var right_sidebar = $('.js-right-sidebar');
-    var sidebar_btn = $('.js-sidebar-btn');
+  // Right Sidebar
+  var right_sidebar = $('.js-right-sidebar');
+  var sidebar_btn = $('.js-sidebar-btn');
 
-    sidebar_btn.on('click', function (e) {
-      e.preventDefault();
-      for (var i = 0; i < menu.length; i++) {
-        menu[i].classList.remove("show-dropdown");
-      }
-      sub_menu_is_showed = -1;
-      right_sidebar.toggleClass("show-sidebar");
-    });
+  sidebar_btn.on('click', function (e) {
+    e.preventDefault();
+    for (var i = 0; i < menu.length; i++) {
+      menu[i].classList.remove("show-dropdown");
+    }
+    sub_menu_is_showed = -1;
+    right_sidebar.toggleClass("show-sidebar");
+  });
 
-    $(".js-right-sidebar, .js-sidebar-btn").click(function (event) {
-      event.stopPropagation();
-    });
+  $(".js-right-sidebar, .js-sidebar-btn").click(function (event) {
+    event.stopPropagation();
+  });
 
-    $("body,html").on("click", function () {
-      right_sidebar.removeClass("show-sidebar");
+  $("body,html").on("click", function () {
+    right_sidebar.removeClass("show-sidebar");
 
-    });
- 
+  });
+
 
   // Sublist Sidebar
   try {
@@ -1646,7 +1792,7 @@
   "use strict";
 
   try {
-    
+
     $('[data-toggle="tooltip"]').tooltip();
 
   } catch (error) {
@@ -1657,14 +1803,14 @@
   try {
     var inbox_wrap = $('.js-inbox');
     var message = $('.au-message__item');
-    message.each(function(){
+    message.each(function () {
       var that = $(this);
 
-      that.on('click', function(){
+      that.on('click', function () {
         $(this).parent().parent().parent().toggleClass('show-chat-box');
       });
     });
-    
+
 
   } catch (error) {
     console.log(error);
